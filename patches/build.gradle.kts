@@ -1,14 +1,14 @@
-group = "app.template"
+group = "app.zerobun"
 
 patches {
     // TODO: Update this section with your project details.
     about {
-        name = "UserXYZ Patches"
-        description = "Patches for apps I like"
-        source = "git@github.com:UserXYZ/morphe-patches.git"
-        author = "Awesome dev"
-        contact = "na"
-        website = "na"
+        name = "Zerobun Patches"
+        description = "Instagram follower tracker for the Zerobun home lab. Use alongside Piko."
+        source = "git@github.com:zerobun0/zerobun-morphe-patches.git"
+        author = "zerobun0"
+        contact = "https://github.com/zerobun0/zerobun-morphe-patches/issues"
+        website = "https://github.com/zerobun0/zerobun-morphe-patches"
         license = "GPLv3"
     }
 }
