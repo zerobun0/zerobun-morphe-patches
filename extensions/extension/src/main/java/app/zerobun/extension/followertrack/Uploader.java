@@ -106,6 +106,11 @@ final class Uploader {
             conn.setReadTimeout(20_000);
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json");
+            // The tracker sits behind Cloudflare, which rejects bot-shaped agents such as
+            // Android's default "Dalvik/..." before the request reaches the server.
+            conn.setRequestProperty("User-Agent",
+                    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) "
+                            + "Chrome/124.0.0.0 Mobile Safari/537.36");
             if (token != null && !token.isEmpty()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
             }
