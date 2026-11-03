@@ -66,12 +66,6 @@ public final class FollowerTrackHook {
             if (row != null && appContext == null) {
                 appContext = row.getContext().getApplicationContext();
             }
-            // Use this one firing to bootstrap the capture button onto EVERY screen.
-            // The hook only fires for the adapter the patch fingerprints (your own
-            // profile's list, in practice), so on its own it leaves other people's
-            // lists with no indicator and nothing to press. Registering here means
-            // one fire anywhere is enough for the rest of the process.
-            if (row != null) Bootstrap.init(row.getContext());
             if (!loggedReady) {
                 loggedReady = true;
                 Log.i(Uploader.TAG, "follower tracking active");
@@ -155,11 +149,26 @@ public final class FollowerTrackHook {
         }
     }
 
+    /**
+     * The username the list screen showed, and the session it was read for.
+     *
+     * Tied to its session on purpose: a batch carried over from the PREVIOUS list is
+     * sent with that list's session, and must not pick up the hint of the list that
+     * replaced it - that would bind the old list's owner id to the new list's name.
+     */
+    private static String ownerHint = "";
+    private static String ownerHintSession = "";
+
     /** The metadata every batch of one scroll carries. */
     private static JSONObject meta(String sessionId) {
         JSONObject extra = new JSONObject();
         try {
-            if (sessionId != null && !sessionId.isEmpty()) extra.put("session", sessionId);
+            if (sessionId != null && !sessionId.isEmpty()) {
+                extra.put("session", sessionId);
+                if (!ownerHint.isEmpty() && sessionId.equals(ownerHintSession)) {
+                    extra.put("owner_hint", ownerHint);
+                }
+            }
         } catch (Throwable ignored) {
         }
         return extra;
@@ -193,6 +202,15 @@ public final class FollowerTrackHook {
                 seen.clear();
                 // A new list is a new capture session, and a new indicator.
                 session = "s" + Long.toString(System.currentTimeMillis(), 36);
+                ownerHintSession = session;
+                ownerHint = "";
+                try {
+                    String read = row == null ? null : ListInspector.listOwner(row.getRootView());
+                    if (read != null) ownerHint = read.trim().toLowerCase();
+                } catch (Throwable ignored) {
+                    // A hint is a convenience; its absence only means the server resolves
+                    // the owner some other way.
+                }
                 AutoScroll.stop("the list changed");
                 // reset() before beginCapture() so a re-entry starts from zero rather
                 // than continuing last visit's count, which would make a fresh full

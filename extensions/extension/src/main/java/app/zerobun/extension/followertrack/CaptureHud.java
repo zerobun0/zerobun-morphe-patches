@@ -131,16 +131,12 @@ public final class CaptureHud {
         detail.setPadding(0, dp(activity, 4), 0, 0);
         panel.addView(detail);
 
-        // Tap opens the dashboard; long-press collapses to one line.
-        //
-        // Collapsing used to be the tap action, but the first thing anyone does when
-        // an indicator appears is tap it to find out more, and there was nothing to
-        // find. The dashboard is that "more".
-        panel.setOnClickListener(v -> CaptureDashboard.show(host.get()));
-        panel.setOnLongClickListener(v -> {
+        // Tap collapses to one line and back. This is only an indicator: the account
+        // list, history and analysis live in the instagram-monitor dashboard and the
+        // Zerobun app, not inside Instagram.
+        panel.setOnClickListener(v -> {
             collapsed = !collapsed;
             refresh();
-            return true;
         });
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
@@ -208,9 +204,6 @@ public final class CaptureHud {
                     && Status.getCaptured() > 0 && !Status.serverWouldAccept()) {
                 line = (line.isEmpty() ? "" : line + "  -  ")
                         + "not enough of the list yet to count as complete";
-            }
-            if (!Status.isComplete() && Status.getUpload() != Status.Upload.FAILED) {
-                line = line.isEmpty() ? "tap for the dashboard" : line + "  ·  tap for more";
             }
             detail.setText(line);
             detail.setVisibility(collapsed || line.isEmpty() ? View.GONE : View.VISIBLE);
