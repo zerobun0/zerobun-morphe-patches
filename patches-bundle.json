@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-03T14:52:43",
-  "description": "## [1.1.0-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.0.0...v1.1.0-dev.1) (2026-11-03)\n\n### ✨ New Features\n\n* v2 - fix the silent upload loss, add a capture indicator and auto-scroll ([ba9f1cb](https://github.com/zerobun0/zerobun-morphe-patches/commit/ba9f1cb25450f78f07edc17c2865bff7d27ae575))",
-  "download_url": "https://github.com/zerobun0/zerobun-morphe-patches/releases/download/v1.1.0-dev.1/patches-1.1.0-dev.1.mpp",
+  "created_at": "2026-11-03T14:55:34",
+  "description": "## [1.1.0](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.0.0...v1.1.0) (2026-11-03)\n\n### ✨ New Features\n\n* v2 - fix the silent upload loss, add a capture indicator and auto-scroll ([ba9f1cb](https://github.com/zerobun0/zerobun-morphe-patches/commit/ba9f1cb25450f78f07edc17c2865bff7d27ae575))",
+  "download_url": "https://github.com/zerobun0/zerobun-morphe-patches/releases/download/v1.1.0/patches-1.1.0.mpp",
   "signature_download_url": "",
-  "version": "1.1.0-dev.1"
+  "version": "1.1.0"
 }
