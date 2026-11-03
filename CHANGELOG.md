@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.2.2...v1.2.3) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* keep rows whose id cannot be read, and report what each list saw ([59be3ce](https://github.com/zerobun0/zerobun-morphe-patches/commit/59be3ce7c396c86f40a03d54261c2e3403c288b3))
+
 ## [1.2.2](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.2.1...v1.2.2) (2026-11-03)
 
 ### 🐛 Bug Fixes
