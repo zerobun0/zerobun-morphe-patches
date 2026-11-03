@@ -73,6 +73,11 @@ public final class FollowerTrackHook {
         JSONArray buffer = new JSONArray();
         final Set<String> seen = new HashSet<>();
         long lastBindAt = 0;
+        /** Diagnostics for this session; see add(). */
+        int binds = 0;
+        int noPk = 0;
+        int unreadable = 0;
+        int adapter = 0;
 
         ListState(String target, String category) {
             this.target = target;
@@ -86,6 +91,10 @@ public final class FollowerTrackHook {
             ownerHint = "";
             seen.clear();
             buffer = new JSONArray();
+            binds = 0;
+            noPk = 0;
+            unreadable = 0;
+            adapter = 0;
         }
     }
 
@@ -136,17 +145,34 @@ public final class FollowerTrackHook {
             } catch (Throwable ignored) {
             }
 
-            String pk = Reflect.str(Reflect.call(user, Config.get("m.id")));
-            if (pk.isEmpty()) return;
+            // A row whose id cannot be read is NOT discarded. It used to be
+            // (`if (pk.isEmpty()) return;`), silently - so if some rows carry a
+            // different kind of user object, they vanished without a trace and the
+            // capture topped out at a fixed fraction of the list (both of one
+            // account's lists stopped at ~75% on 2026-11-03). The username alone is
+            // enough for the store; only a row with neither is truly unreadable, and
+            // that is counted and reported rather than hidden.
+            String pk = "";
+            try {
+                pk = Reflect.str(Reflect.call(user, Config.get("m.id")));
+            } catch (Throwable ignored) {
+            }
+            String username = Reflect.str(safeCall(user, "m.username"));
 
-            JSONObject entry = new JSONObject();
-            entry.put("pk", pk);
-            entry.put("username", Reflect.str(safeCall(user, "m.username")));
-            entry.put("full_name", Reflect.str(safeCall(user, "m.fullName")));
-            Object picInfo = safeCall(user, "m.picInfo");
-            entry.put("profile_pic_url", picInfo == null ? "" : Reflect.str(safeCallNamed(picInfo, "getUrl")));
+            JSONObject entry = null;
+            String dedupe = null;
+            if (!pk.isEmpty() || !username.isEmpty()) {
+                entry = new JSONObject();
+                if (!pk.isEmpty()) entry.put("pk", pk);
+                entry.put("username", username);
+                entry.put("full_name", Reflect.str(safeCall(user, "m.fullName")));
+                Object picInfo = safeCall(user, "m.picInfo");
+                entry.put("profile_pic_url", picInfo == null ? ""
+                        : Reflect.str(safeCallNamed(picInfo, "getUrl")));
+                dedupe = pk.isEmpty() ? "n:" + username : pk;
+            }
 
-            add(target, category, pk, entry, row);
+            add(target, category, dedupe, entry, pk.isEmpty(), row);
         } catch (Throwable t) {
             // Never break Instagram's own list.
             Log.w(Uploader.TAG, "row capture failed", t);
@@ -214,6 +240,13 @@ public final class FollowerTrackHook {
             if (st.session != null && !st.session.isEmpty()) {
                 extra.put("session", st.session);
                 if (!st.ownerHint.isEmpty()) extra.put("owner_hint", st.ownerHint);
+                JSONObject diag = new JSONObject();
+                diag.put("binds", st.binds);
+                diag.put("unique", st.seen.size());
+                diag.put("no_pk", st.noPk);
+                diag.put("unreadable", st.unreadable);
+                diag.put("adapter", st.adapter);
+                extra.put("diag", diag);
             }
         } catch (Throwable ignored) {
         }
@@ -235,7 +268,7 @@ public final class FollowerTrackHook {
     }
 
     private static void add(String target, String category, String pk,
-                            JSONObject entry, View row) {
+                            JSONObject entry, boolean noPk, View row) {
         int batchSize = Math.max(1, Math.min(200, Config.getInt("cfg.batch", 50)));
         String key = target + "|" + category;
         boolean visible = onScreen(row);
@@ -270,7 +303,22 @@ public final class FollowerTrackHook {
                     // some other way.
                 }
             }
-            if (st.seen.add(pk)) st.buffer.put(entry);
+            // What this list actually did, so a shortfall can be explained from the
+            // server's side instead of guessed at: how many binds happened, how many
+            // had no readable id, how many had nothing readable at all.
+            st.binds++;
+            if (entry == null) {
+                st.unreadable++;
+            } else {
+                if (noPk) st.noPk++;
+                if (st.seen.add(pk)) st.buffer.put(entry);
+            }
+            if (st.binds % 20 == 0 && row != null) {
+                try {
+                    st.adapter = ListInspector.adapterCount(row.getRootView(), 0);
+                } catch (Throwable ignored) {
+                }
+            }
             total = st.seen.size();
             if (visible && !key.equals(activeKey)) {
                 activeKey = key;
