@@ -135,6 +135,14 @@ public final class AutoScroll {
             lastCount = captured;
         }
 
+        // Re-read the total each step. Instagram often renders the count only after
+        // the first page has loaded, so a capture that started with no denominator
+        // can still acquire one - which is what lets it be verified at the end.
+        if (Status.getExpected() <= 0) {
+            int found = ListInspector.expectedCount(list, Status.getCategory());
+            if (found > 0) Status.setExpected(found);
+        }
+
         // Stop as soon as the profile's own count is satisfied, rather than scrolling
         // past it for no reason.
         int want = Status.getExpected();

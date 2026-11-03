@@ -100,7 +100,7 @@ public final class FollowerTrackHook {
             Object picInfo = safeCall(user, "m.picInfo");
             entry.put("profile_pic_url", picInfo == null ? "" : Reflect.str(safeCallNamed(picInfo, "getUrl")));
 
-            add(target, category, pk, entry);
+            add(target, category, pk, entry, position, row);
             showIndicator(row);
         } catch (Throwable t) {
             // Never break Instagram's own list.
@@ -159,7 +159,8 @@ public final class FollowerTrackHook {
         return extra;
     }
 
-    private static void add(String target, String category, String pk, JSONObject entry) {
+    private static void add(String target, String category, String pk,
+                            JSONObject entry, int position, View row) {
         int batchSize = Math.max(1, Math.min(200, Config.getInt("cfg.batch", 50)));
         JSONArray toSend = null;
         String sendTarget = null, sendCategory = null, sendSession = null;
@@ -191,7 +192,8 @@ public final class FollowerTrackHook {
                 // than continuing last visit's count, which would make a fresh full
                 // scroll look like it had already captured everything.
                 Status.reset();
-                Status.beginCapture(target, category, 0);
+                Status.beginCapture(target, category,
+                        ListInspector.expectedCount(row, category));
                 hudAttached = false;
                 currentKey = key;
             }

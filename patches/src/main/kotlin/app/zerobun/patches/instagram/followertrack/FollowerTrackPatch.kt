@@ -75,13 +75,14 @@ val followerTrackPatch = bytecodePatch(
         required = true,
     ) { it!!.toIntOrNull()?.let { n -> n in 1..200 } == true }
 
-    // Off by default: scrolling someone's list by itself is a thing to choose, not a
-    // surprise. When on, AutoScroll paces one screen at a time with randomised gaps
-    // and stops the moment you touch the list - the point of capturing from the real
-    // app is to look like ordinary use.
+    // ON by default. Capturing only what you happened to scroll past means a list of
+    // 546 yields whatever you had the patience for, and a partial list cannot detect
+    // departures at all - so the useful default is for the list to walk itself. It
+    // still paces one screen at a time with randomised gaps and stops the instant you
+    // touch the list, and the in-app dashboard can start or stop it at any time.
     val autoScroll by stringOption(
         key = "autoScroll",
-        default = "false",
+        default = "true",
         title = "Scroll lists automatically",
         description = "Walk a follower or following list to its end by itself once you " +
             "open it. Paced deliberately, and stops as soon as you touch the screen.",

@@ -75,6 +75,20 @@ public final class Status {
         changed();
     }
 
+    /**
+     * Records how long the list should be, once that is known.
+     *
+     * Only ever raises it. The number can be read while the list is still paging, and
+     * a later, smaller reading (a partially rendered label, a different count on the
+     * same screen) must not shrink the target and make a short capture look finished.
+     */
+    public static void setExpected(int count) {
+        if (count > expected.get()) {
+            expected.set(count);
+            changed();
+        }
+    }
+
     public static void rowsCaptured(int total) {
         captured.set(total);
         changed();
