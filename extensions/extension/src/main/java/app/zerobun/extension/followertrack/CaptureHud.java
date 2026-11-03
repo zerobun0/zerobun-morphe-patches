@@ -131,17 +131,52 @@ public final class CaptureHud {
         detail.setPadding(0, dp(activity, 4), 0, 0);
         panel.addView(detail);
 
-        // Tap to collapse to a single line. It must never hide a row being read.
-        panel.setOnClickListener(v -> {
+        // Tap opens the dashboard; long-press collapses to one line.
+        //
+        // Collapsing used to be the tap action, but the first thing anyone does when
+        // an indicator appears is tap it to find out more, and there was nothing to
+        // find. The dashboard is that "more".
+        panel.setOnClickListener(v -> CaptureDashboard.show(host.get()));
+        panel.setOnLongClickListener(v -> {
             collapsed = !collapsed;
             refresh();
+            return true;
         });
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.gravity = Gravity.TOP;
-        lp.setMargins(dp(activity, 10), dp(activity, 10), dp(activity, 10), 0);
+        // BOTTOM, not top. At the top it sat under the status bar on an edge-to-edge
+        // activity - reported as "on my phone's status bar, can't even see it
+        // properly" - and it covered the first rows of the very list being captured.
+        lp.gravity = Gravity.BOTTOM;
+        lp.setMargins(dp(activity, 10), 0, dp(activity, 10), dp(activity, 10));
         panel.setLayoutParams(lp);
+
+        // Keep clear of the system bars whatever the activity does about insets. A
+        // fixed margin is not enough: it is the gesture bar and status bar heights
+        // that vary, and they are only known at runtime.
+        panel.setOnApplyWindowInsetsListener((v, insets) -> {
+            int bottom = 0;
+            int top = 0;
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    android.graphics.Insets bars = insets.getInsets(
+                            android.view.WindowInsets.Type.systemBars());
+                    bottom = bars.bottom;
+                    top = bars.top;
+                } else {
+                    bottom = insets.getSystemWindowInsetBottom();
+                    top = insets.getSystemWindowInsetTop();
+                }
+            } catch (Throwable ignored) {
+            }
+            FrameLayout.LayoutParams p = (FrameLayout.LayoutParams) v.getLayoutParams();
+            p.bottomMargin = dp(activity, 10) + bottom;
+            p.topMargin = dp(activity, 10) + top;
+            v.setLayoutParams(p);
+            return insets;
+        });
+        panel.requestApplyInsets();
 
         content.addView(panel);
         root = panel;
@@ -173,6 +208,9 @@ public final class CaptureHud {
                     && Status.getCaptured() > 0 && !Status.serverWouldAccept()) {
                 line = (line.isEmpty() ? "" : line + "  -  ")
                         + "not enough of the list yet to count as complete";
+            }
+            if (!Status.isComplete() && Status.getUpload() != Status.Upload.FAILED) {
+                line = line.isEmpty() ? "tap for the dashboard" : line + "  ·  tap for more";
             }
             detail.setText(line);
             detail.setVisibility(collapsed || line.isEmpty() ? View.GONE : View.VISIBLE);

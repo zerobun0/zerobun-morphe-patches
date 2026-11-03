@@ -166,7 +166,13 @@ public final class FollowerTrackHook {
         int total;
         synchronized (LOCK) {
             String key = target + "|" + category;
-            if (!key.equals(currentKey)) {
+            // A bind at the very top of a list that we have already collected from is
+            // a RE-ENTRY, not a continuation. Without this the dedupe set below still
+            // holds everyone from last time, so re-opening the list captures nothing
+            // at all and no batch is ever sent - exactly the reported "when I try
+            // going there again it doesn't work".
+            boolean reEntered = key.equals(currentKey) && position <= 1 && seen.size() > 2;
+            if (!key.equals(currentKey) || reEntered) {
                 if (buffer.length() > 0) {
                     toSend = buffer;
                     sendTarget = currentTarget;
@@ -181,12 +187,21 @@ public final class FollowerTrackHook {
                 // A new list is a new capture session, and a new indicator.
                 session = "s" + Long.toString(System.currentTimeMillis(), 36);
                 AutoScroll.stop("the list changed");
+                // reset() before beginCapture() so a re-entry starts from zero rather
+                // than continuing last visit's count, which would make a fresh full
+                // scroll look like it had already captured everything.
+                Status.reset();
                 Status.beginCapture(target, category, 0);
                 hudAttached = false;
+                currentKey = key;
             }
             if (seen.add(pk)) buffer.put(entry);
             total = seen.size();
             if (buffer.length() >= batchSize) {
+                // Send the carried-over batch HERE rather than letting the assignment
+                // below overwrite the reference to it. Overwriting silently dropped a
+                // whole batch whenever a list change and a full buffer landed in the
+                // same call.
                 if (toSend != null && appContext != null) {
                     Uploader.send(appContext, toSend, sendTarget, sendCategory, meta(sendSession));
                 }
