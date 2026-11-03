@@ -66,6 +66,12 @@ public final class FollowerTrackHook {
             if (row != null && appContext == null) {
                 appContext = row.getContext().getApplicationContext();
             }
+            // Use this one firing to bootstrap the capture button onto EVERY screen.
+            // The hook only fires for the adapter the patch fingerprints (your own
+            // profile's list, in practice), so on its own it leaves other people's
+            // lists with no indicator and nothing to press. Registering here means
+            // one fire anywhere is enough for the rest of the process.
+            if (row != null) Bootstrap.init(row.getContext());
             if (!loggedReady) {
                 loggedReady = true;
                 Log.i(Uploader.TAG, "follower tracking active");

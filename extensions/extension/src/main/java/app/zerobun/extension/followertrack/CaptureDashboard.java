@@ -160,12 +160,10 @@ public final class CaptureDashboard {
             if (a == null) return;
             if (AutoScroll.isRunning()) {
                 AutoScroll.stop("you stopped it");
-                toast(a, "Stopped. Scroll by hand, or tap again to resume.");
+                ScrapeCapture.finish(a);
+                toast(a, "Stopped. What was captured has been sent.");
             } else {
-                AutoScroll.start(a);
-                toast(a, AutoScroll.isRunning()
-                        ? "Walking the list to the end. Touch the list to take over."
-                        : "No list on screen - open a followers or following list first.");
+                captureHere(a);
             }
             refresh();
         });
@@ -248,6 +246,31 @@ public final class CaptureDashboard {
             UI.postDelayed(this, 1_000L);
         }
     };
+
+    /**
+     * Captures the list that is open right now, whoever it belongs to.
+     *
+     * Reads the rendered rows rather than relying on the row-binder hook, which is
+     * why this works on other people's lists where the hook never fires. The list
+     * owner is taken from the screen; when it cannot be read the server attributes
+     * the rows by the names in them, which is still better than refusing to capture.
+     */
+    public static void captureHere(Activity activity) {
+        if (activity == null) return;
+        String category = ListInspector.looksLikeFollowing(
+                activity.findViewById(android.R.id.content)) ? "followings" : "followers";
+        String owner = ListInspector.listOwner(
+                activity.findViewById(android.R.id.content));
+        ScrapeCapture.start(activity, owner, category);
+        if (!AutoScroll.isRunning()) {
+            toast(activity, "No scrollable list found - open a followers or "
+                    + "following list, then try again.");
+        } else {
+            toast(activity, "Capturing "
+                    + (owner == null || owner.isEmpty() ? "this list" : "@" + owner)
+                    + "'s " + category + " to the end. Touch the list to take over.");
+        }
+    }
 
     private static void toast(Activity a, String message) {
         try {

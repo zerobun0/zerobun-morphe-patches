@@ -125,8 +125,12 @@ public final class AutoScroll {
             if (++stalled >= STALL_LIMIT) {
                 // Reaching the end is the SUCCESS case: tell Status, which only
                 // claims completeness if the count agrees with the profile's own.
-                Status.markComplete();
-                FollowerTrackHook.onListEnded();
+                if (ScrapeCapture.isRunning()) {
+                    ScrapeCapture.finish(Bootstrap.currentActivity());
+                } else {
+                    Status.markComplete();
+                    FollowerTrackHook.onListEnded();
+                }
                 stop("reached the end of the list");
                 return;
             }
@@ -147,13 +151,22 @@ public final class AutoScroll {
         // past it for no reason.
         int want = Status.getExpected();
         if (want > 0 && captured >= want) {
-            Status.markComplete();
-            FollowerTrackHook.onListEnded();
+            if (ScrapeCapture.isRunning()) {
+                ScrapeCapture.finish(Bootstrap.currentActivity());
+            } else {
+                Status.markComplete();
+                FollowerTrackHook.onListEnded();
+            }
             stop("captured the whole list");
             return;
         }
 
         scrollOneScreen(list);
+        // Read whatever is now rendered. This is what captures lists the row-binder
+        // hook never sees, and a scroll step is exactly when new rows have arrived.
+        if (ScrapeCapture.isRunning()) {
+            ScrapeCapture.sweep(Bootstrap.currentActivity());
+        }
         UI.postDelayed(AutoScroll::step, pause());
     }
 

@@ -177,6 +177,100 @@ final class ListInspector {
         }
     }
 
+
+    /**
+     * Whether the open list is a FOLLOWING list rather than a followers list.
+     *
+     * Read from the screen's own words, because the two lists are the same view with
+     * a different title and recording one as the other would merge two different sets
+     * of people. When nothing says, followers is the assumption - it is the list
+     * opened far more often, and a wrong guess here only mislabels a capture rather
+     * than destroying one.
+     */
+    static boolean looksLikeFollowing(View root) {
+        return scanWords(root, 0, true);
+    }
+
+    /**
+     * The handle whose list this is, or "" when the screen does not say.
+     *
+     * A profile screen and a follow list both show the owner's handle in their
+     * header, usually as the first short lowercase handle-shaped text on screen.
+     * Empty is an honest answer: the server then attributes rows by the names in
+     * them rather than filing them against a guessed owner, and filing a list
+     * against the wrong person writes false history that cannot be taken back.
+     */
+    static String listOwner(View root) {
+        String found = scanOwner(root, 0);
+        return found == null ? "" : found;
+    }
+
+    private static boolean scanWords(View view, int depth, boolean wantFollowing) {
+        if (view == null || depth > 25) return false;
+        if (view instanceof TextView && view.isShown()) {
+            CharSequence raw = ((TextView) view).getText();
+            String text = raw == null ? "" : raw.toString().toLowerCase();
+            if (text.length() <= 40) {
+                // "following" contains "follow", so test the longer word first.
+                if (text.contains("following")) return true;
+                if (text.contains("followers")) return false;
+            }
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View child = group.getChildAt(i);
+                if (child instanceof TextView && child.isShown()) {
+                    CharSequence raw = ((TextView) child).getText();
+                    String text = raw == null ? "" : raw.toString().toLowerCase();
+                    if (text.contains("following")) return true;
+                    if (text.contains("followers")) return false;
+                }
+            }
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (scanWords(group.getChildAt(i), depth + 1, wantFollowing)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static String scanOwner(View view, int depth) {
+        if (view == null || depth > 12) return null;  // headers are shallow
+        if (view instanceof TextView && view.isShown()) {
+            CharSequence raw = ((TextView) view).getText();
+            String text = raw == null ? "" : raw.toString().trim();
+            if (isHandleShaped(text)) return text.toLowerCase();
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                String found = scanOwner(group.getChildAt(i), depth + 1);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isHandleShaped(String text) {
+        if (text.isEmpty() || text.length() > 30) return false;
+        String lower = text.toLowerCase();
+        if (lower.equals("followers") || lower.equals("following")
+                || lower.equals("follow") || lower.equals("posts")
+                || lower.equals("search") || lower.equals("reels")) {
+            return false;
+        }
+        boolean letter = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= 'a' && c <= 'z') {
+                letter = true;
+            } else if (!((c >= '0' && c <= '9') || c == '.' || c == '_')) {
+                return false;
+            }
+        }
+        return letter;
+    }
+
     private static Method findMethod(Class<?> type, String name) {
         for (Class<?> c = type; c != null; c = c.getSuperclass()) {
             try {
