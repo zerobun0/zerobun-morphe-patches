@@ -1,3 +1,9 @@
+## [1.2.0-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.1.1-dev.1...v1.2.0-dev.1) (2026-11-03)
+
+### ✨ New Features
+
+* capture any list you can see, from a button that is always there ([1244715](https://github.com/zerobun0/zerobun-morphe-patches/commit/1244715ad9537b2102e3cc63f5f1a5a23141e9fa))
+
 ## [1.1.1-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.1.0...v1.1.1-dev.1) (2026-11-03)
 
 ### 🐛 Bug Fixes
