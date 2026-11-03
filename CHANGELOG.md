@@ -1,3 +1,9 @@
+## [1.2.1-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.2.0...v1.2.1-dev.1) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* stop reading list rows off the screen; name a list's owner safely ([b3db558](https://github.com/zerobun0/zerobun-morphe-patches/commit/b3db5583728e3978484cf894342c42c96e552027))
+
 ## [1.2.0](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.1.0...v1.2.0) (2026-11-03)
 
 ### ✨ New Features
