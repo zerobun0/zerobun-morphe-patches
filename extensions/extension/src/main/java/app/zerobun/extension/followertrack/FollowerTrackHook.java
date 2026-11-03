@@ -9,7 +9,9 @@
 
 package app.zerobun.extension.followertrack;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -25,6 +27,12 @@ import java.util.Set;
  * Called at the end of the follow-list binder's bindView for every row you scroll past.
  * Collects {pk, username, full_name, profile_pic_url} and which list it came from, and
  * hands batches to {@link Uploader}. Makes no Instagram request of its own.
+ *
+ * <p>v2 additions: it feeds {@link Status} so the on-screen indicator can say what is
+ * happening, attaches {@link CaptureHud}, optionally starts {@link AutoScroll}, and
+ * tags every batch with a capture session so the server can group them - and, when the
+ * list really ends, sends a closing batch marked complete so the server may diff the
+ * whole list rather than only adding to it.
  */
 @SuppressWarnings("unused")
 public final class FollowerTrackHook {
@@ -39,6 +47,14 @@ public final class FollowerTrackHook {
     private static final Set<String> seen = new HashSet<>();
     private static Context appContext;
     private static boolean loggedReady;
+
+    /**
+     * Identifies one scroll of one list. The server groups batches by this and only
+     * diffs a session that was closed as complete, so it must change when the list
+     * changes and not before.
+     */
+    private static String session = "";
+    private static boolean hudAttached;
 
     private static final Runnable FLUSH = FollowerTrackHook::flush;
 
@@ -85,10 +101,40 @@ public final class FollowerTrackHook {
             entry.put("profile_pic_url", picInfo == null ? "" : Reflect.str(safeCallNamed(picInfo, "getUrl")));
 
             add(target, category, pk, entry);
+            showIndicator(row);
         } catch (Throwable t) {
             // Never break Instagram's own list.
             Log.w(Uploader.TAG, "row capture failed", t);
         }
+    }
+
+    /**
+     * Brings up the HUD, and auto-scroll if it was switched on.
+     *
+     * Wrapped whole: an indicator that cannot be drawn must never stop a capture, which
+     * is the only thing here that matters.
+     */
+    private static void showIndicator(View row) {
+        if (hudAttached || row == null) return;
+        try {
+            Activity activity = activityOf(row.getContext());
+            if (activity == null) return;
+            hudAttached = true;
+            CaptureHud.attach(activity);
+            if ("true".equalsIgnoreCase(String.valueOf(Config.get("cfg.autoscroll")))) {
+                AutoScroll.start(activity);
+            }
+        } catch (Throwable t) {
+            Log.w(Uploader.TAG, "indicator unavailable", t);
+        }
+    }
+
+    private static Activity activityOf(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
     }
 
     private static Object safeCall(Object obj, String key) {
@@ -103,10 +149,21 @@ public final class FollowerTrackHook {
         }
     }
 
+    /** The metadata every batch of one scroll carries. */
+    private static JSONObject meta(String sessionId) {
+        JSONObject extra = new JSONObject();
+        try {
+            if (sessionId != null && !sessionId.isEmpty()) extra.put("session", sessionId);
+        } catch (Throwable ignored) {
+        }
+        return extra;
+    }
+
     private static void add(String target, String category, String pk, JSONObject entry) {
         int batchSize = Math.max(1, Math.min(200, Config.getInt("cfg.batch", 50)));
         JSONArray toSend = null;
-        String sendTarget = null, sendCategory = null;
+        String sendTarget = null, sendCategory = null, sendSession = null;
+        int total;
         synchronized (LOCK) {
             String key = target + "|" + category;
             if (!key.equals(currentKey)) {
@@ -114,26 +171,35 @@ public final class FollowerTrackHook {
                     toSend = buffer;
                     sendTarget = currentTarget;
                     sendCategory = currentCategory;
+                    sendSession = session;
                 }
                 currentKey = key;
                 currentTarget = target;
                 currentCategory = category;
                 buffer = new JSONArray();
                 seen.clear();
+                // A new list is a new capture session, and a new indicator.
+                session = "s" + Long.toString(System.currentTimeMillis(), 36);
+                AutoScroll.stop("the list changed");
+                Status.beginCapture(target, category, 0);
+                hudAttached = false;
             }
             if (seen.add(pk)) buffer.put(entry);
+            total = seen.size();
             if (buffer.length() >= batchSize) {
                 if (toSend != null && appContext != null) {
-                    Uploader.send(appContext, toSend, sendTarget, sendCategory);
+                    Uploader.send(appContext, toSend, sendTarget, sendCategory, meta(sendSession));
                 }
                 toSend = buffer;
                 sendTarget = currentTarget;
                 sendCategory = currentCategory;
+                sendSession = session;
                 buffer = new JSONArray();
             }
         }
+        Status.rowsCaptured(total);
         if (toSend != null && appContext != null) {
-            Uploader.send(appContext, toSend, sendTarget, sendCategory);
+            Uploader.send(appContext, toSend, sendTarget, sendCategory, meta(sendSession));
         }
         MAIN.removeCallbacks(FLUSH);
         MAIN.postDelayed(FLUSH, FLUSH_DEBOUNCE_MS);
@@ -141,14 +207,63 @@ public final class FollowerTrackHook {
 
     private static void flush() {
         JSONArray toSend;
-        String target, category;
+        String target, category, sessionId;
         synchronized (LOCK) {
             if (buffer.length() == 0) return;
             toSend = buffer;
             target = currentTarget;
             category = currentCategory;
+            sessionId = session;
             buffer = new JSONArray();
         }
-        if (appContext != null) Uploader.send(appContext, toSend, target, category);
+        if (appContext != null) {
+            Uploader.send(appContext, toSend, target, category, meta(sessionId));
+        }
+    }
+
+    /**
+     * Closes the capture: the list reached its end.
+     *
+     * Sends any remaining rows, then a final batch marked complete, which is what
+     * permits the server to diff the list as a whole rather than only adding to it.
+     *
+     * The claim is deliberately conditional. `Status.serverWouldAccept()` applies the
+     * same 90% ratio the server uses, so if the scroll ended short of the profile's own
+     * count this reports the rows WITHOUT claiming completeness - the server then treats
+     * it as partial, which is exactly right, and the indicator says the list still needs
+     * doing. Claiming it anyway is how a broken scroll turns into hundreds of false
+     * departures.
+     */
+    public static void onListEnded() {
+        flush();
+        String target, category, sessionId;
+        synchronized (LOCK) {
+            target = currentTarget;
+            category = currentCategory;
+            sessionId = session;
+        }
+        if (appContext == null || sessionId == null || sessionId.isEmpty()) return;
+        boolean acceptable = Status.serverWouldAccept();
+        JSONObject extra = meta(sessionId);
+        try {
+            if (acceptable) {
+                extra.put("complete", true);
+                if (Status.getExpected() > 0) {
+                    extra.put("expected_count", Status.getExpected());
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        if (!acceptable) {
+            Log.i(Uploader.TAG, "list ended but only " + Status.getCaptured() + " of "
+                    + Status.getExpected() + " captured - not claiming complete");
+            return;
+        }
+        Uploader.send(appContext, new JSONArray(), target, category, extra);
+    }
+
+    /** Lets the profile hook tell the capture how long the list should be. */
+    public static void onProfileCount(String target, String category, int count) {
+        if (count > 0) Status.beginCapture(target, category, count);
     }
 }

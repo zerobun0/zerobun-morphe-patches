@@ -53,13 +53,19 @@ val followerTrackPatch = bytecodePatch(
         required = true,
     ) { it!!.startsWith("https://") }
 
+    // Optional on purpose. A required token is baked into every APK built from this
+    // patch, which is wrong for an APK that gets shared, and the server hands the
+    // token to an already-authenticated client at GET /egress/token anyway. With it
+    // blank the uploader sends no Authorization header and the batches queue on the
+    // phone until a token is provisioned, rather than being lost.
     val trackerToken by stringOption(
         key = "trackerToken",
         default = "",
         title = "Tracker token",
-        description = "INSTA_RELAY_TOKEN from the server's .env. Sent as a Bearer token.",
-        required = true,
-    ) { !it.isNullOrBlank() }
+        description = "INSTA_RELAY_TOKEN from the server's .env, sent as a Bearer token. " +
+            "Leave blank to keep it out of the APK - uploads queue until it is set.",
+        required = false,
+    )
 
     val batchSize by stringOption(
         key = "batchSize",
@@ -69,11 +75,25 @@ val followerTrackPatch = bytecodePatch(
         required = true,
     ) { it!!.toIntOrNull()?.let { n -> n in 1..200 } == true }
 
+    // Off by default: scrolling someone's list by itself is a thing to choose, not a
+    // surprise. When on, AutoScroll paces one screen at a time with randomised gaps
+    // and stops the moment you touch the list - the point of capturing from the real
+    // app is to look like ordinary use.
+    val autoScroll by stringOption(
+        key = "autoScroll",
+        default = "false",
+        title = "Scroll lists automatically",
+        description = "Walk a follower or following list to its end by itself once you " +
+            "open it. Paced deliberately, and stops as soon as you touch the screen.",
+        required = false,
+    ) { it == null || it == "true" || it == "false" }
+
     execute {
         val config = linkedMapOf(
             "cfg.url" to trackerUrl!!,
-            "cfg.token" to trackerToken!!,
+            "cfg.token" to (trackerToken ?: ""),
             "cfg.batch" to batchSize!!,
+            "cfg.autoscroll" to (autoScroll ?: "false"),
         )
 
         // User getters. Id and username are required; name and picture are extras.
