@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.2.1...v1.2.2) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* keep a separate capture state per list ([ca5e4e4](https://github.com/zerobun0/zerobun-morphe-patches/commit/ca5e4e4306afd1f9f54dd24c9508f7d3364cdac6))
+
 ## [1.2.2-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.2.1...v1.2.2-dev.1) (2026-11-03)
 
 ### 🐛 Bug Fixes
