@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-03T14:55:34",
-  "description": "## [1.1.0](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.0.0...v1.1.0) (2026-11-03)\n\n### ✨ New Features\n\n* v2 - fix the silent upload loss, add a capture indicator and auto-scroll ([ba9f1cb](https://github.com/zerobun0/zerobun-morphe-patches/commit/ba9f1cb25450f78f07edc17c2865bff7d27ae575))",
-  "download_url": "https://github.com/zerobun0/zerobun-morphe-patches/releases/download/v1.1.0/patches-1.1.0.mpp",
+  "created_at": "2026-11-03T15:21:52",
+  "description": "## [1.1.1-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.1.0...v1.1.1-dev.1) (2026-11-03)\n\n### 🐛 Bug Fixes\n\n* a dashboard inside Instagram, and the three capture bugs found in real use ([8cb9c03](https://github.com/zerobun0/zerobun-morphe-patches/commit/8cb9c03324d1732f62d87be9088f4ea72c673c2f))\n* verify the capture against the profile's own total, and capture automatically ([7934490](https://github.com/zerobun0/zerobun-morphe-patches/commit/7934490f6efa1248327ea4da41ac4951fc70f2e2))",
+  "download_url": "https://github.com/zerobun0/zerobun-morphe-patches/releases/download/v1.1.1-dev.1/patches-1.1.1-dev.1.mpp",
   "signature_download_url": "",
-  "version": "1.1.0"
+  "version": "1.1.1-dev.1"
 }

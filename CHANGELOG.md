@@ -1,3 +1,10 @@
+## [1.1.1-dev.1](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.1.0...v1.1.1-dev.1) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* a dashboard inside Instagram, and the three capture bugs found in real use ([8cb9c03](https://github.com/zerobun0/zerobun-morphe-patches/commit/8cb9c03324d1732f62d87be9088f4ea72c673c2f))
+* verify the capture against the profile's own total, and capture automatically ([7934490](https://github.com/zerobun0/zerobun-morphe-patches/commit/7934490f6efa1248327ea4da41ac4951fc70f2e2))
+
 ## [1.1.0](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.0.0...v1.1.0) (2026-11-03)
 
 ### ✨ New Features
