@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/zerobun0/zerobun-morphe-patches/compare/v1.0.0...v1.1.0) (2026-11-03)
+
+### ✨ New Features
+
+* v2 - fix the silent upload loss, add a capture indicator and auto-scroll ([ba9f1cb](https://github.com/zerobun0/zerobun-morphe-patches/commit/ba9f1cb25450f78f07edc17c2865bff7d27ae575))
+
 ## 1.0.0 (2026-11-02)
 
 ### ✨ New Features
